@@ -1,0 +1,131 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  name      String
+  email     String   @unique
+  password  String
+  avatarUrl String?
+  role      UserRole @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  questions     Question[]
+  answers       Answer[]
+  votes         Vote[]
+  notifications Notification[]
+
+  @@map("users")
+}
+
+model Question {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  title       String
+  description String
+  authorId    String   @db.ObjectId
+  tagNames    String[] // Store tag names directly for MongoDB
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  author        User           @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  answers       Answer[]
+  votes         Vote[]
+  notifications Notification[]
+
+  @@map("questions")
+}
+
+model Answer {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  content    String
+  questionId String   @db.ObjectId
+  authorId   String   @db.ObjectId
+  isAccepted Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relations
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  votes    Vote[]
+
+  @@map("answers")
+}
+
+model Tag {
+  id          String   @id @default(auto()) @map("_id") @db.ObjectId
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+
+  @@map("tags")
+}
+
+model Vote {
+  id         String     @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String     @db.ObjectId
+  targetType TargetType
+  targetId   String     @db.ObjectId
+  voteType   VoteType
+  createdAt  DateTime   @default(now())
+
+  // Relations
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question? @relation(fields: [targetId], references: [id], onDelete: Cascade)
+  answer   Answer?   @relation(fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetType, targetId])
+  @@map("votes")
+}
+
+model Notification {
+  id                String           @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String           @db.ObjectId
+  type              NotificationType
+  title             String
+  message           String
+  relatedQuestionId String?          @db.ObjectId
+  relatedUserId     String?          @db.ObjectId
+  isRead            Boolean          @default(false)
+  createdAt         DateTime         @default(now())
+
+  // Relations
+  user            User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  relatedQuestion Question? @relation(fields: [relatedQuestionId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum TargetType {
+  QUESTION
+  ANSWER
+}
+
+enum VoteType {
+  UP
+  DOWN
+}
+
+enum NotificationType {
+  ANSWER
+  COMMENT
+  MENTION
+  VOTE
+}
