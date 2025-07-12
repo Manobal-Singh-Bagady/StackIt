@@ -183,6 +183,27 @@ export default function ProfilePage() {
                   Edit Profile
                 </Link>
               </Button>
+              {/* Admin delete user button (not for own profile) */}
+              {user.role === 'ADMIN' && user.id !== undefined && (
+                <Button
+                  variant="destructive"
+                  className="ml-2"
+                  onClick={async () => {
+                    if (confirm('Are you sure you want to delete this user?')) {
+                      try {
+                        const res = await fetch(`/api/moderation/users/${user.id}`, { method: 'DELETE' })
+                        if (!res.ok) throw new Error('Failed to delete user')
+                        alert('User deleted')
+                        window.location.href = '/'
+                      } catch (err) {
+                        alert('Delete failed')
+                      }
+                    }
+                  }}
+                >
+                  Delete User
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>

@@ -28,7 +28,7 @@ interface NotificationSettings {
 }
 
 export default function SettingsPage() {
-	const { user, logout } = useAuth()
+	const { user, logout, loading } = useAuth()
 	const { toast } = useToast()
 
 	// Profile settings
@@ -57,6 +57,13 @@ export default function SettingsPage() {
 
 	const [loading, setLoading] = useState(false)
 
+	if (loading) {
+		return (
+			<div className='flex justify-center items-center min-h-screen'>
+				<span>Loading...</span>
+			</div>
+		)
+	}
 	if (!user) {
 		return (
 			<div className='container mx-auto px-4 py-8'>
