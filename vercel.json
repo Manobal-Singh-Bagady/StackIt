@@ -1,0 +1,8 @@
+{
+    "buildCommand": "prisma generate && pnpm run build",
+    "functions": {
+        "app/api/**": {
+            "maxDuration": 10
+        }
+    }
+}
