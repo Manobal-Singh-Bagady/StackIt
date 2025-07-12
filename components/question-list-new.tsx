@@ -228,7 +228,6 @@ export function QuestionList({ searchParams }: QuestionListProps) {
 				<Pagination
 					currentPage={Number.parseInt(searchParams.page || '1')}
 					totalPages={totalPages}
-					searchParams={searchParams}
 				/>
 			)}
 		</div>
