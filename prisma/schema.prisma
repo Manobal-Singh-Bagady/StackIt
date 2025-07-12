@@ -23,6 +23,7 @@ model User {
   // Relations
   questions     Question[]
   answers       Answer[]
+  comments      Comment[]
   votes         Vote[]
   notifications Notification[]
 
@@ -57,11 +58,27 @@ model Answer {
   updatedAt  DateTime @updatedAt
 
   // Relations
-  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  author   User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  question Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  author   User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
   votes    Vote[]
+  comments Comment[]
 
   @@map("answers")
+}
+
+model Comment {
+  id        String   @id @default(auto()) @map("_id") @db.ObjectId
+  content   String
+  answerId  String   @db.ObjectId
+  authorId  String   @db.ObjectId
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  answer Answer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  author User   @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@map("comments")
 }
 
 model Tag {
@@ -125,6 +142,7 @@ enum VoteType {
 
 enum NotificationType {
   ANSWER
+  ACCEPTED
   COMMENT
   MENTION
   VOTE

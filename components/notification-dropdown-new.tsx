@@ -12,13 +12,13 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Bell, MessageCircle, ArrowUp, AtSign } from 'lucide-react'
+import { Bell, MessageCircle, ArrowUp, AtSign, CheckCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useAuth } from '@/hooks/use-auth'
 
 interface Notification {
 	id: string
-	type: 'ANSWER' | 'COMMENT' | 'MENTION' | 'VOTE'
+	type: 'ANSWER' | 'ACCEPTED' | 'COMMENT' | 'MENTION' | 'VOTE'
 	title: string
 	message: string
 	createdAt: string
@@ -101,6 +101,8 @@ export function NotificationDropdown() {
 		switch (type) {
 			case 'ANSWER':
 				return <MessageCircle className='h-4 w-4' />
+			case 'ACCEPTED':
+				return <CheckCircle className='h-4 w-4 text-green-600' />
 			case 'VOTE':
 				return <ArrowUp className='h-4 w-4' />
 			case 'MENTION':

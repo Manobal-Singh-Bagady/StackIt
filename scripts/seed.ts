@@ -180,6 +180,31 @@ export function middleware(request: NextRequest) {
 		],
 	})
 
+	// Create some comments
+	const comment1 = await prisma.comment.create({
+		data: {
+			content: 'This is a great explanation! I especially liked the point about HTTP-only cookies.',
+			answerId: answer1.id,
+			authorId: user1.id,
+		},
+	})
+
+	const comment2 = await prisma.comment.create({
+		data: {
+			content: 'Could you provide more details about implementing refresh tokens?',
+			answerId: answer1.id,
+			authorId: admin.id,
+		},
+	})
+
+	const comment3 = await prisma.comment.create({
+		data: {
+			content: 'Thank you for the clear explanation of when to use each hook!',
+			answerId: answer2.id,
+			authorId: user2.id,
+		},
+	})
+
 	// Create notifications
 	await prisma.notification.createMany({
 		data: [
@@ -193,9 +218,33 @@ export function middleware(request: NextRequest) {
 			},
 			{
 				userId: user2.id,
+				type: 'ACCEPTED',
+				title: 'Your answer was accepted!',
+				message: 'Your answer about JWT authentication was accepted by John Doe',
+				relatedQuestionId: question1.id,
+				relatedUserId: user1.id,
+			},
+			{
+				userId: user2.id,
 				type: 'VOTE',
 				title: 'Your answer was upvoted',
 				message: 'Your answer about JWT authentication received an upvote',
+				relatedQuestionId: question1.id,
+				relatedUserId: admin.id,
+			},
+			{
+				userId: user2.id,
+				type: 'COMMENT',
+				title: 'New comment on your answer',
+				message: 'John Doe commented on your answer about JWT authentication',
+				relatedQuestionId: question1.id,
+				relatedUserId: user1.id,
+			},
+			{
+				userId: user2.id,
+				type: 'COMMENT',
+				title: 'New comment on your answer',
+				message: 'Admin User commented on your answer about JWT authentication',
 				relatedQuestionId: question1.id,
 				relatedUserId: admin.id,
 			},

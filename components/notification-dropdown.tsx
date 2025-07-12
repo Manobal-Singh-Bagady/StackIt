@@ -12,13 +12,14 @@ import {
 	DropdownMenuSeparator,
 	DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Bell, MessageCircle, ArrowUp, AtSign } from 'lucide-react'
+import { Bell, MessageCircle, ArrowUp, AtSign, CheckCircle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { useAuth } from '@/hooks/use-auth'
+import { useToast } from '@/hooks/use-toast'
 
 interface Notification {
 	id: string
-	type: 'ANSWER' | 'COMMENT' | 'MENTION' | 'VOTE'
+	type: 'ANSWER' | 'ACCEPTED' | 'COMMENT' | 'MENTION' | 'VOTE'
 	title: string
 	message: string
 	createdAt: string
@@ -35,6 +36,7 @@ export function NotificationDropdown() {
 	const [unreadCount, setUnreadCount] = useState(0)
 	const [loading, setLoading] = useState(false)
 	const { user } = useAuth()
+	const { toast } = useToast()
 
 	useEffect(() => {
 		if (user) {
@@ -60,13 +62,18 @@ export function NotificationDropdown() {
 
 	const markAsRead = async (notificationIds: string[]) => {
 		try {
-			await fetch('/api/notifications', {
+			const response = await fetch('/api/notifications', {
 				method: 'PATCH',
 				headers: {
 					'Content-Type': 'application/json',
 				},
 				body: JSON.stringify({ notificationIds }),
 			})
+
+			if (!response.ok) {
+				const data = await response.json()
+				throw new Error(data.error || 'Failed to mark notifications as read')
+			}
 
 			// Update local state
 			setNotifications((prev) =>
@@ -77,12 +84,17 @@ export function NotificationDropdown() {
 			setUnreadCount((prev) => Math.max(0, prev - notificationIds.length))
 		} catch (error) {
 			console.error('Error marking notifications as read:', error)
+			toast({
+				title: 'Error',
+				description: error instanceof Error ? error.message : 'Failed to mark notifications as read.',
+				variant: 'destructive',
+			})
 		}
 	}
 
 	const markAllAsRead = async () => {
 		try {
-			await fetch('/api/notifications', {
+			const response = await fetch('/api/notifications', {
 				method: 'PATCH',
 				headers: {
 					'Content-Type': 'application/json',
@@ -90,10 +102,25 @@ export function NotificationDropdown() {
 				body: JSON.stringify({ markAllAsRead: true }),
 			})
 
+			if (!response.ok) {
+				const data = await response.json()
+				throw new Error(data.error || 'Failed to mark all notifications as read')
+			}
+
 			setNotifications((prev) => prev.map((notification) => ({ ...notification, isRead: true })))
 			setUnreadCount(0)
+
+			toast({
+				title: 'Success',
+				description: 'All notifications marked as read.',
+			})
 		} catch (error) {
 			console.error('Error marking all notifications as read:', error)
+			toast({
+				title: 'Error',
+				description: error instanceof Error ? error.message : 'Failed to mark all notifications as read.',
+				variant: 'destructive',
+			})
 		}
 	}
 
@@ -101,6 +128,8 @@ export function NotificationDropdown() {
 		switch (type) {
 			case 'ANSWER':
 				return <MessageCircle className='h-4 w-4' />
+			case 'ACCEPTED':
+				return <CheckCircle className='h-4 w-4 text-green-600' />
 			case 'VOTE':
 				return <ArrowUp className='h-4 w-4' />
 			case 'MENTION':
