@@ -2,7 +2,7 @@
 
 import type React from 'react'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,20 +14,6 @@ import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/hooks/use-auth'
 import { X } from 'lucide-react'
 
-const suggestedTags = [
-	'javascript',
-	'react',
-	'nextjs',
-	'typescript',
-	'nodejs',
-	'python',
-	'css',
-	'html',
-	'api',
-	'database',
-	'authentication',
-]
-
 export default function AskQuestionPage() {
 	const { user } = useAuth()
 	const router = useRouter()
@@ -37,6 +23,42 @@ export default function AskQuestionPage() {
 	const [tags, setTags] = useState<string[]>([])
 	const [newTag, setNewTag] = useState('')
 	const [isSubmitting, setIsSubmitting] = useState(false)
+	const [suggestedTags, setSuggestedTags] = useState<string[]>([])
+	const [loadingTags, setLoadingTags] = useState(true)
+
+	// Fetch suggested tags from database
+	useEffect(() => {
+		const fetchTags = async () => {
+			try {
+				const response = await fetch('/api/tags')
+				if (response.ok) {
+					const data = await response.json()
+					// Get the most popular tags (you could sort by usage count)
+					setSuggestedTags(data.tags.map((tag: any) => tag.name).slice(0, 12))
+				}
+			} catch (error) {
+				console.error('Failed to fetch tags:', error)
+				// Fallback to hardcoded tags
+				setSuggestedTags([
+					'javascript',
+					'react',
+					'nextjs',
+					'typescript',
+					'nodejs',
+					'python',
+					'css',
+					'html',
+					'api',
+					'database',
+					'authentication',
+				])
+			} finally {
+				setLoadingTags(false)
+			}
+		}
+
+		fetchTags()
+	}, [])
 
 	const addTag = (tag: string) => {
 		const trimmedTag = tag.trim().toLowerCase()
@@ -217,23 +239,27 @@ export default function AskQuestionPage() {
 
 								<div className='space-y-2'>
 									<p className='text-sm font-medium'>Suggested tags:</p>
-									<div className='flex flex-wrap gap-2'>
-										{suggestedTags
-											.filter((tag) => !tags.includes(tag))
-											.slice(0, 8)
-											.map((tag) => (
-												<Button
-													key={tag}
-													type='button'
-													variant='outline'
-													size='sm'
-													onClick={() => addTag(tag)}
-													disabled={tags.length >= 5}
-													className='text-xs'>
-													{tag}
-												</Button>
-											))}
-									</div>
+									{loadingTags ? (
+										<p className='text-xs text-muted-foreground'>Loading suggestions...</p>
+									) : (
+										<div className='flex flex-wrap gap-2'>
+											{suggestedTags
+												.filter((tag) => !tags.includes(tag))
+												.slice(0, 8)
+												.map((tag) => (
+													<Button
+														key={tag}
+														type='button'
+														variant='outline'
+														size='sm'
+														onClick={() => addTag(tag)}
+														disabled={tags.length >= 5}
+														className='text-xs'>
+														{tag}
+													</Button>
+												))}
+										</div>
+									)}
 								</div>
 							</div>
 						</CardContent>

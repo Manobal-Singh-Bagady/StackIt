@@ -6,6 +6,7 @@ import { createContext, useState, useEffect } from 'react'
 import { useToast } from '@/hooks/use-toast'
 
 interface User {
+  avatar: string
 	id: string
 	name: string
 	email: string
