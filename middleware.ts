@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextRequest } from 'next/server'
 import { verifyToken } from './lib/auth'
 
 // Routes that require authentication
-const protectedRoutes = ['/settings']
+const protectedRoutes = ['/settings', '/profile']
 
 // Routes that should redirect to home if already authenticated
 const authRoutes = ['/login', '/register']
@@ -13,7 +13,7 @@ export function middleware(request: NextRequest) {
 	const token = request.cookies.get('auth-token')?.value
 
 	// Check if user is authenticated
-	const isAuthenticated = token && verifyToken(token)
+	const isAuthenticated = !!token
 
 	// Redirect authenticated users away from auth pages
 	if (isAuthenticated && authRoutes.includes(pathname)) {
