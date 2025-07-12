@@ -10,6 +10,7 @@ import { Pagination } from "@/components/pagination"
 import { LoadingSpinner } from "@/components/loading-spinner"
 import { formatDistanceToNow } from "date-fns"
 import { ArrowUp, ArrowDown, MessageCircle, Check } from "lucide-react"
+import { useAuth } from "@/hooks/use-auth"
 
 interface Question {
   id: string
@@ -19,14 +20,12 @@ interface Question {
   author: {
     id: string
     name: string
-    avatar?: string
+    avatarUrl?: string
   }
   createdAt: string
-  votes: number
+  voteScore: number
   answerCount: number
   hasAcceptedAnswer: boolean
-  isUpvoted?: boolean
-  isDownvoted?: boolean
 }
 
 interface QuestionListProps {
@@ -42,70 +41,89 @@ export function QuestionList({ searchParams }: QuestionListProps) {
   const [questions, setQuestions] = useState<Question[]>([])
   const [loading, setLoading] = useState(true)
   const [totalPages, setTotalPages] = useState(1)
+  const [error, setError] = useState<string | null>(null)
+  const { user } = useAuth()
 
-  // Mock data for demonstration
   useEffect(() => {
-    const mockQuestions: Question[] = [
-      {
-        id: "1",
-        title: "How to implement JWT authentication in Next.js?",
-        description:
-          "I am trying to implement JWT authentication in my Next.js application but facing some issues with token storage and validation.",
-        tags: ["nextjs", "jwt", "authentication"],
-        author: {
-          id: "1",
-          name: "John Doe",
-          avatar: "/placeholder.svg?height=32&width=32",
-        },
-        createdAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
-        votes: 15,
-        answerCount: 3,
-        hasAcceptedAnswer: true,
-      },
-      {
-        id: "2",
-        title: "React useState vs useReducer - When to use which?",
-        description:
-          "I am confused about when to use useState and when to use useReducer in React. Can someone explain the differences and use cases?",
-        tags: ["react", "hooks", "state-management"],
-        author: {
-          id: "2",
-          name: "Jane Smith",
-          avatar: "/placeholder.svg?height=32&width=32",
-        },
-        createdAt: new Date(Date.now() - 5 * 60 * 60 * 1000).toISOString(),
-        votes: 8,
-        answerCount: 2,
-        hasAcceptedAnswer: false,
-      },
-      {
-        id: "3",
-        title: "Best practices for TypeScript in large projects",
-        description:
-          "What are some best practices for using TypeScript in large-scale applications? Looking for advice on project structure, type definitions, and performance.",
-        tags: ["typescript", "best-practices", "architecture"],
-        author: {
-          id: "3",
-          name: "Mike Johnson",
-          avatar: "/placeholder.svg?height=32&width=32",
-        },
-        createdAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000).toISOString(),
-        votes: 23,
-        answerCount: 5,
-        hasAcceptedAnswer: true,
-      },
-    ]
-
-    // Simulate API call delay
-    setTimeout(() => {
-      setQuestions(mockQuestions)
-      setTotalPages(1)
-      setLoading(false)
-    }, 500)
+    fetchQuestions()
   }, [searchParams])
+
+  const fetchQuestions = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      
+      const params = new URLSearchParams()
+      if (searchParams.search) params.set('search', searchParams.search)
+      if (searchParams.tags) params.set('tags', searchParams.tags)
+      if (searchParams.sort) params.set('sort', searchParams.sort)
+      if (searchParams.page) params.set('page', searchParams.page)
+      
+      const response = await fetch(`/api/questions?${params.toString()}`)
+      if (!response.ok) {
+        throw new Error('Failed to fetch questions')
+      }
+      
+      const data = await response.json()
+      setQuestions(data.questions)
+      setTotalPages(data.pagination.totalPages)
+    } catch (error) {
+      console.error('Error fetching questions:', error)
+      setError('Failed to load questions. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleVote = async (questionId: string, voteType: 'UP' | 'DOWN') => {
+    if (!user) {
+      // Handle unauthenticated user
+      return
+    }
+
+    try {
+      const response = await fetch('/api/votes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          targetType: 'QUESTION',
+          targetId: questionId,
+          voteType,
+        }),
+      })
+
+      if (!response.ok) {
+        throw new Error('Failed to vote')
+      }
+
+      const data = await response.json()
+      
+      // Update the question's vote score
+      setQuestions(prev => prev.map(q => 
+        q.id === questionId 
+          ? { ...q, voteScore: data.voteScore }
+          : q
+      ))
+    } catch (error) {
+      console.error('Error voting:', error)
+    }
+  }
 
   if (loading) {
     return <LoadingSpinner />
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-8">
+        <p className="text-muted-foreground mb-4">{error}</p>
+        <Button onClick={fetchQuestions} variant="outline">
+          Try Again
+        </Button>
+      </div>
+    )
   }
 
   if (questions.length === 0) {
@@ -157,11 +175,23 @@ export function QuestionList({ searchParams }: QuestionListProps) {
                 {/* Stats - horizontal on mobile, vertical on desktop */}
                 <div className="flex lg:flex-col items-center gap-4 lg:gap-2 flex-shrink-0">
                   <div className="flex lg:flex-col items-center gap-1">
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0"
+                      onClick={() => handleVote(question.id, 'UP')}
+                      disabled={!user}
+                    >
                       <ArrowUp className="w-4 h-4" />
                     </Button>
-                    <span className="text-sm font-medium">{question.votes}</span>
-                    <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                    <span className="text-sm font-medium">{question.voteScore}</span>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="h-8 w-8 p-0"
+                      onClick={() => handleVote(question.id, 'DOWN')}
+                      disabled={!user}
+                    >
                       <ArrowDown className="w-4 h-4" />
                     </Button>
                   </div>
@@ -186,7 +216,7 @@ export function QuestionList({ searchParams }: QuestionListProps) {
                 </div>
                 <div className="flex items-center space-x-2 text-sm text-muted-foreground flex-shrink-0">
                   <Avatar className="w-6 h-6">
-                    <AvatarImage src={question.author.avatar || "/placeholder.svg"} alt={question.author.name} />
+                    <AvatarImage src={question.author.avatarUrl || "/placeholder.svg"} alt={question.author.name} />
                     <AvatarFallback className="text-xs">{question.author.name.charAt(0).toUpperCase()}</AvatarFallback>
                   </Avatar>
                   <span className="truncate">{question.author.name}</span>
@@ -201,7 +231,12 @@ export function QuestionList({ searchParams }: QuestionListProps) {
         ))}
       </div>
 
-      {totalPages > 1 && <Pagination currentPage={Number.parseInt(searchParams.page || "1")} totalPages={totalPages} />}
+      {totalPages > 1 && (
+        <Pagination 
+          currentPage={Number.parseInt(searchParams.page || "1")} 
+          totalPages={totalPages} 
+        />
+      )}
     </div>
   )
 }
