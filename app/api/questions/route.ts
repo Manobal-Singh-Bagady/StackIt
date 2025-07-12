@@ -12,13 +12,16 @@ const createQuestionSchema = z.object({
 const querySchema = z.object({
 	search: z.string().optional(),
 	tags: z.string().optional(),
-	sort: z.enum(['newest', 'oldest', 'popular']).optional().default('newest'),
+	sort: z.enum(['newest', 'oldest', 'popular', 'unanswered']).optional().default('newest'),
 	page: z.string().optional().default('1'),
 	limit: z.string().optional().default('10'),
 })
 
 export async function GET(request: NextRequest) {
 	try {
+		// Get current user (optional for public questions)
+		const user = await getCurrentUser(request).catch(() => null)
+
 		const { searchParams } = new URL(request.url)
 		const query = querySchema.parse({
 			search: searchParams.get('search') || undefined,
@@ -54,6 +57,9 @@ export async function GET(request: NextRequest) {
 		} else if (query.sort === 'popular') {
 			// For now, sort by number of answers. Later we can add vote count
 			orderBy = { answers: { _count: 'desc' } }
+		} else if (query.sort === 'unanswered') {
+			// Sort by questions with no answers, newest first
+			orderBy = [{ answers: { _count: 'asc' } }, { createdAt: 'desc' }]
 		}
 
 		const [questions, total] = await Promise.all([
@@ -79,6 +85,7 @@ export async function GET(request: NextRequest) {
 					votes: {
 						select: {
 							voteType: true,
+							userId: true,
 						},
 					},
 					_count: {
@@ -93,20 +100,27 @@ export async function GET(request: NextRequest) {
 		])
 
 		// Calculate vote scores and format response
-		const formattedQuestions = questions.map((question) => ({
-			id: question.id,
-			title: question.title,
-			description: question.description,
-			tags: question.tagNames,
-			author: question.author,
-			createdAt: question.createdAt,
-			updatedAt: question.updatedAt,
-			answerCount: question._count.answers,
-			voteScore: question.votes.reduce((score, vote) => {
+		const formattedQuestions = questions.map((question) => {
+			const voteScore = question.votes.reduce((score, vote) => {
 				return score + (vote.voteType === 'UP' ? 1 : -1)
-			}, 0),
-			hasAcceptedAnswer: question.answers.some((answer) => answer.isAccepted),
-		}))
+			}, 0)
+
+			const userVote = user ? question.votes.find((vote) => vote.userId === user.id)?.voteType || null : null
+
+			return {
+				id: question.id,
+				title: question.title,
+				description: question.description,
+				tags: question.tagNames,
+				author: question.author,
+				createdAt: question.createdAt,
+				updatedAt: question.updatedAt,
+				answerCount: question._count.answers,
+				voteScore,
+				userVote,
+				hasAcceptedAnswer: question.answers.some((answer) => answer.isAccepted),
+			}
+		})
 
 		return new Response(
 			JSON.stringify({

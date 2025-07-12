@@ -22,6 +22,20 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 								avatarUrl: true,
 							},
 						},
+						comments: {
+							include: {
+								author: {
+									select: {
+										id: true,
+										name: true,
+										avatarUrl: true,
+									},
+								},
+							},
+							orderBy: {
+								createdAt: 'asc',
+							},
+						},
 						votes: {
 							select: {
 								voteType: true,
@@ -31,6 +45,7 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 						_count: {
 							select: {
 								votes: true,
+								comments: true,
 							},
 						},
 					},
@@ -77,6 +92,8 @@ export async function GET(request: NextRequest, { params }: { params: { id: stri
 				return score + (vote.voteType === 'UP' ? 1 : -1)
 			}, 0),
 			votes: answer.votes,
+			comments: answer.comments,
+			commentCount: answer._count.comments,
 		}))
 
 		const formattedQuestion = {
