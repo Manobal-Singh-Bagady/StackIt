@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 
+export const runtime = 'nodejs'
+
 const createQuestionSchema = z.object({
 	title: z.string().min(10, 'Title must be at least 10 characters'),
 	description: z.string().min(20, 'Description must be at least 20 characters'),

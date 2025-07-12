@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 
+export const runtime = 'nodejs'
+
 const createCommentSchema = z.object({
 	content: z.string().min(10, 'Comment must be at least 10 characters'),
 	answerId: z.string(),

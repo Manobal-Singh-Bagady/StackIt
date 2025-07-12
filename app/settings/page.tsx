@@ -1,7 +1,6 @@
 'use client'
 
 import type React from 'react'
-
 import { useState } from 'react'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,7 +27,7 @@ interface NotificationSettings {
 }
 
 export default function SettingsPage() {
-	const { user, logout, loading } = useAuth()
+	const { user, logout, loading: authLoading } = useAuth()
 	const { toast } = useToast()
 
 	// Profile settings
@@ -55,15 +54,16 @@ export default function SettingsPage() {
 		weeklyDigest: true,
 	})
 
-	const [loading, setLoading] = useState(false)
+	const [isSubmitting, setIsSubmitting] = useState(false)
 
-	if (loading) {
+	if (authLoading) {
 		return (
 			<div className='flex justify-center items-center min-h-screen'>
 				<span>Loading...</span>
 			</div>
 		)
 	}
+
 	if (!user) {
 		return (
 			<div className='container mx-auto px-4 py-8'>
@@ -84,7 +84,7 @@ export default function SettingsPage() {
 
 	const handleProfileUpdate = async (e: React.FormEvent) => {
 		e.preventDefault()
-		setLoading(true)
+		setIsSubmitting(true)
 
 		try {
 			// Simulate API call
@@ -101,7 +101,7 @@ export default function SettingsPage() {
 				variant: 'destructive',
 			})
 		} finally {
-			setLoading(false)
+			setIsSubmitting(false)
 		}
 	}
 
@@ -117,7 +117,7 @@ export default function SettingsPage() {
 			return
 		}
 
-		setLoading(true)
+		setIsSubmitting(true)
 
 		try {
 			// Simulate API call
@@ -138,7 +138,7 @@ export default function SettingsPage() {
 				variant: 'destructive',
 			})
 		} finally {
-			setLoading(false)
+			setIsSubmitting(false)
 		}
 	}
 
@@ -295,9 +295,9 @@ export default function SettingsPage() {
 										<Badge variant='secondary'>Role: {user.role}</Badge>
 									</div>
 
-									<Button type='submit' disabled={loading}>
+									<Button type='submit' disabled={isSubmitting}>
 										<Save className='w-4 h-4 mr-2' />
-										{loading ? 'Saving...' : 'Save Changes'}
+										{isSubmitting ? 'Saving...' : 'Save Changes'}
 									</Button>
 								</form>
 							</CardContent>
@@ -372,9 +372,9 @@ export default function SettingsPage() {
 										</div>
 									</div>
 
-									<Button type='submit' disabled={loading}>
+									<Button type='submit' disabled={isSubmitting}>
 										<Lock className='w-4 h-4 mr-2' />
-										{loading ? 'Updating...' : 'Update Password'}
+										{isSubmitting ? 'Updating...' : 'Update Password'}
 									</Button>
 								</form>
 

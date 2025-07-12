@@ -1,6 +1,8 @@
 import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 
+export const runtime = 'nodejs'
+
 export async function GET(request: NextRequest, { params }: { params: { id: string } }) {
 	try {
 		const question = await prisma.question.findUnique({

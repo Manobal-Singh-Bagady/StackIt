@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 
+export const runtime = 'nodejs'
+
 export async function PATCH(request: NextRequest, { params }: { params: { id: string } }) {
 	try {
 		const user = await getCurrentUser(request)

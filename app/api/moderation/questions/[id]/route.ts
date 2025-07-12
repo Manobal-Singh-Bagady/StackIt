@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 
+export const runtime = 'nodejs'
+
 export async function DELETE(request: NextRequest, { params }: { params: { id: string } }) {
 	const user = await getCurrentUser(request)
 	if (!user) {

@@ -3,6 +3,8 @@ import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { getCurrentUser } from '@/lib/auth'
 
+export const runtime = 'nodejs'
+
 const voteSchema = z.object({
 	targetType: z.enum(['QUESTION', 'ANSWER']),
 	targetId: z.string(),
