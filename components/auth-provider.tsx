@@ -34,19 +34,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 		checkAuth()
 	}, [])
 
-	const checkAuth = async () => {
-		try {
-			const response = await fetch('/api/auth/me')
-			if (response.ok) {
-				const data = await response.json()
-				setUser(data.user)
-			}
-		} catch (error) {
-			console.error('Auth check failed:', error)
-		} finally {
-			setLoading(false)
-		}
+  const checkAuth = async () => {
+	try {
+	  const response = await fetch('/api/auth/me', { credentials: 'include' })
+	  if (response.ok) {
+		const data = await response.json()
+		setUser(data.user)
+	  }
+	} catch (error) {
+	  console.error('Auth check failed:', error)
+	} finally {
+	  setLoading(false)
 	}
+  }
 
 	const login = async (email: string, password: string) => {
 		try {

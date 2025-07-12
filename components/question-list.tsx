@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -11,6 +12,7 @@ import { LoadingSpinner } from '@/components/loading-spinner'
 import { formatDistanceToNow } from 'date-fns'
 import { ArrowUp, ArrowDown, MessageCircle, Check } from 'lucide-react'
 import { useAuth } from '@/hooks/use-auth'
+import { useToast } from '@/hooks/use-toast'
 
 interface Question {
 	id: string
@@ -26,27 +28,32 @@ interface Question {
 	voteScore: number
 	answerCount: number
 	hasAcceptedAnswer: boolean
+	userVote?: 'UP' | 'DOWN' | null
 }
 
-interface QuestionListProps {
-	searchParams: {
-		search?: string
-		tags?: string
-		sort?: string
-		page?: string
-	}
-}
+interface QuestionListProps {}
 
-export function QuestionList({ searchParams }: QuestionListProps) {
+export function QuestionList({}: QuestionListProps) {
 	const [questions, setQuestions] = useState<Question[]>([])
 	const [loading, setLoading] = useState(true)
 	const [totalPages, setTotalPages] = useState(1)
 	const [error, setError] = useState<string | null>(null)
 	const { user } = useAuth()
+	const searchParams = useSearchParams()
+	const router = useRouter()
+	const { toast } = useToast()
+
+	// Convert searchParams to an object for easier use
+	const searchParamsObj = {
+		search: searchParams.get('search') || undefined,
+		tags: searchParams.get('tags') || undefined,
+		sort: searchParams.get('sort') || undefined,
+		page: searchParams.get('page') || undefined,
+	}
 
 	useEffect(() => {
 		fetchQuestions()
-	}, [searchParams])
+	}, [searchParams]) // Now listening to searchParams changes directly
 
 	const fetchQuestions = async () => {
 		try {
@@ -54,10 +61,10 @@ export function QuestionList({ searchParams }: QuestionListProps) {
 			setError(null)
 
 			const params = new URLSearchParams()
-			if (searchParams.search) params.set('search', searchParams.search)
-			if (searchParams.tags) params.set('tags', searchParams.tags)
-			if (searchParams.sort) params.set('sort', searchParams.sort)
-			if (searchParams.page) params.set('page', searchParams.page)
+			if (searchParamsObj.search) params.set('search', searchParamsObj.search)
+			if (searchParamsObj.tags) params.set('tags', searchParamsObj.tags)
+			if (searchParamsObj.sort) params.set('sort', searchParamsObj.sort)
+			if (searchParamsObj.page) params.set('page', searchParamsObj.page)
 
 			const response = await fetch(`/api/questions?${params.toString()}`)
 			if (!response.ok) {
@@ -77,7 +84,11 @@ export function QuestionList({ searchParams }: QuestionListProps) {
 
 	const handleVote = async (questionId: string, voteType: 'UP' | 'DOWN') => {
 		if (!user) {
-			// Handle unauthenticated user
+			toast({
+				title: 'Authentication required',
+				description: 'Please log in to vote on questions.',
+				variant: 'destructive',
+			})
 			return
 		}
 
@@ -94,17 +105,46 @@ export function QuestionList({ searchParams }: QuestionListProps) {
 				}),
 			})
 
-			if (!response.ok) {
-				throw new Error('Failed to vote')
-			}
-
 			const data = await response.json()
 
-			// Update the question's vote score
-			setQuestions((prev) => prev.map((q) => (q.id === questionId ? { ...q, voteScore: data.voteScore } : q)))
+			if (!response.ok) {
+				// Handle specific error messages from API
+				throw new Error(data.error || 'Failed to vote')
+			}
+
+			// Update the question's vote score and user vote
+			setQuestions((prev) =>
+				prev.map((q) =>
+					q.id === questionId
+						? {
+								...q,
+								voteScore: data.voteScore,
+								userVote: data.userVote,
+						  }
+						: q
+				)
+			)
+
+			// Show success toast
+			toast({
+				title: 'Vote recorded',
+				description: `Your ${voteType.toLowerCase()} vote has been recorded.`,
+			})
 		} catch (error) {
 			console.error('Error voting:', error)
+			toast({
+				title: 'Voting failed',
+				description: error instanceof Error ? error.message : 'Failed to record your vote. Please try again.',
+				variant: 'destructive',
+			})
 		}
+	}
+
+	const handleSort = (sortType: string) => {
+		const params = new URLSearchParams(searchParams)
+		params.set('sort', sortType)
+		params.delete('page') // Reset to first page when sorting
+		router.push(`/?${params.toString()}`)
 	}
 
 	if (loading) {
@@ -141,13 +181,22 @@ export function QuestionList({ searchParams }: QuestionListProps) {
 					{questions.length} Question{questions.length !== 1 ? 's' : ''}
 				</h2>
 				<div className='flex flex-wrap items-center gap-2'>
-					<Button variant='outline' size='sm'>
+					<Button
+						variant={searchParamsObj.sort === 'newest' ? 'default' : 'outline'}
+						size='sm'
+						onClick={() => handleSort('newest')}>
 						Newest
 					</Button>
-					<Button variant='ghost' size='sm'>
+					<Button
+						variant={searchParamsObj.sort === 'popular' ? 'default' : 'outline'}
+						size='sm'
+						onClick={() => handleSort('popular')}>
 						Most Voted
 					</Button>
-					<Button variant='ghost' size='sm'>
+					<Button
+						variant={searchParamsObj.sort === 'unanswered' ? 'default' : 'outline'}
+						size='sm'
+						onClick={() => handleSort('unanswered')}>
 						Unanswered
 					</Button>
 				</div>
@@ -164,7 +213,10 @@ export function QuestionList({ searchParams }: QuestionListProps) {
 										className='text-lg font-semibold hover:text-primary transition-colors block'>
 										{question.title}
 									</Link>
-									<p className='text-muted-foreground mt-2 line-clamp-2'>{question.description}</p>
+									<div
+										className='text-muted-foreground mt-2 line-clamp-2 prose prose-sm max-w-none [&_a]:text-blue-600 [&_a]:underline [&_a:hover]:text-blue-800 dark:[&_a]:text-blue-400 dark:[&_a:hover]:text-blue-300'
+										dangerouslySetInnerHTML={{ __html: question.description }}
+									/>
 								</div>
 
 								{/* Stats - horizontal on mobile, vertical on desktop */}
@@ -173,7 +225,11 @@ export function QuestionList({ searchParams }: QuestionListProps) {
 										<Button
 											variant='ghost'
 											size='sm'
-											className='h-8 w-8 p-0'
+											className={`h-8 w-8 p-0 ${
+												question.userVote === 'UP'
+													? 'text-green-600 bg-green-50 hover:bg-green-100'
+													: 'hover:text-green-600'
+											}`}
 											onClick={() => handleVote(question.id, 'UP')}
 											disabled={!user}>
 											<ArrowUp className='w-4 h-4' />
@@ -182,7 +238,9 @@ export function QuestionList({ searchParams }: QuestionListProps) {
 										<Button
 											variant='ghost'
 											size='sm'
-											className='h-8 w-8 p-0'
+											className={`h-8 w-8 p-0 ${
+												question.userVote === 'DOWN' ? 'text-red-600 bg-red-50 hover:bg-red-100' : 'hover:text-red-600'
+											}`}
 											onClick={() => handleVote(question.id, 'DOWN')}
 											disabled={!user}>
 											<ArrowDown className='w-4 h-4' />
@@ -217,6 +275,26 @@ export function QuestionList({ searchParams }: QuestionListProps) {
 									<span className='hidden sm:inline'>
 										{formatDistanceToNow(new Date(question.createdAt), { addSuffix: true })}
 									</span>
+									{/* Admin delete button */}
+									{user?.role === 'ADMIN' && (
+										<Button
+											variant='destructive'
+											size='sm'
+											onClick={async () => {
+												if (confirm('Are you sure you want to delete this question?')) {
+													try {
+														const res = await fetch(`/api/moderation/questions/${question.id}`, { method: 'DELETE' })
+														if (!res.ok) throw new Error('Failed to delete question')
+														setQuestions((prev) => prev.filter((q) => q.id !== question.id))
+														toast({ title: 'Question deleted' })
+													} catch (err) {
+														toast({ title: 'Delete failed', variant: 'destructive' })
+													}
+												}
+											}}>
+											Delete
+										</Button>
+									)}
 								</div>
 							</div>
 						</CardContent>
@@ -224,7 +302,9 @@ export function QuestionList({ searchParams }: QuestionListProps) {
 				))}
 			</div>
 
-			{totalPages > 1 && <Pagination currentPage={Number.parseInt(searchParams.page || '1')} totalPages={totalPages} />}
+			{totalPages > 1 && (
+				<Pagination currentPage={Number.parseInt(searchParamsObj.page || '1')} totalPages={totalPages} />
+			)}
 		</div>
 	)
 }

@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
@@ -28,21 +29,24 @@ interface Question {
 	hasAcceptedAnswer: boolean
 }
 
-interface QuestionListProps {
-	searchParams: {
-		search?: string
-		tags?: string
-		sort?: string
-		page?: string
-	}
-}
+interface QuestionListProps {}
 
-export function QuestionList({ searchParams }: QuestionListProps) {
+export function QuestionList({}: QuestionListProps) {
 	const [questions, setQuestions] = useState<Question[]>([])
 	const [loading, setLoading] = useState(true)
 	const [totalPages, setTotalPages] = useState(1)
 	const [error, setError] = useState<string | null>(null)
 	const { user } = useAuth()
+	const router = useRouter()
+	const searchParams = useSearchParams()
+
+	// Convert searchParams to an object for easier use
+	const searchParamsObj = {
+		search: searchParams.get('search') || undefined,
+		tags: searchParams.get('tags') || undefined,
+		sort: searchParams.get('sort') || 'newest',
+		page: searchParams.get('page') || undefined,
+	}
 
 	useEffect(() => {
 		fetchQuestions()
@@ -54,10 +58,10 @@ export function QuestionList({ searchParams }: QuestionListProps) {
 			setError(null)
 
 			const params = new URLSearchParams()
-			if (searchParams.search) params.set('search', searchParams.search)
-			if (searchParams.tags) params.set('tags', searchParams.tags)
-			if (searchParams.sort) params.set('sort', searchParams.sort)
-			if (searchParams.page) params.set('page', searchParams.page)
+			if (searchParamsObj.search) params.set('search', searchParamsObj.search)
+			if (searchParamsObj.tags) params.set('tags', searchParamsObj.tags)
+			if (searchParamsObj.sort) params.set('sort', searchParamsObj.sort)
+			if (searchParamsObj.page) params.set('page', searchParamsObj.page)
 
 			const response = await fetch(`/api/questions?${params.toString()}`)
 			if (!response.ok) {
@@ -107,6 +111,13 @@ export function QuestionList({ searchParams }: QuestionListProps) {
 		}
 	}
 
+	const handleSort = (sortType: string) => {
+		const params = new URLSearchParams(searchParams)
+		params.set('sort', sortType)
+		params.delete('page') // Reset to first page when sorting
+		router.push(`/?${params.toString()}`)
+	}
+
 	if (loading) {
 		return <LoadingSpinner />
 	}
@@ -141,13 +152,22 @@ export function QuestionList({ searchParams }: QuestionListProps) {
 					{questions.length} Question{questions.length !== 1 ? 's' : ''}
 				</h2>
 				<div className='flex flex-wrap items-center gap-2'>
-					<Button variant='outline' size='sm'>
+					<Button
+						variant={searchParamsObj.sort === 'newest' ? 'default' : 'outline'}
+						size='sm'
+						onClick={() => handleSort('newest')}>
 						Newest
 					</Button>
-					<Button variant='ghost' size='sm'>
+					<Button
+						variant={searchParamsObj.sort === 'popular' ? 'default' : 'outline'}
+						size='sm'
+						onClick={() => handleSort('popular')}>
 						Most Voted
 					</Button>
-					<Button variant='ghost' size='sm'>
+					<Button
+						variant={searchParamsObj.sort === 'unanswered' ? 'default' : 'outline'}
+						size='sm'
+						onClick={() => handleSort('unanswered')}>
 						Unanswered
 					</Button>
 				</div>
@@ -225,10 +245,7 @@ export function QuestionList({ searchParams }: QuestionListProps) {
 			</div>
 
 			{totalPages > 1 && (
-				<Pagination
-					currentPage={Number.parseInt(searchParams.page || '1')}
-					totalPages={totalPages}
-				/>
+				<Pagination currentPage={Number.parseInt(searchParamsObj.page || '1')} totalPages={totalPages} />
 			)}
 		</div>
 	)

@@ -87,7 +87,7 @@ export async function PATCH(request: NextRequest, { params }: { params: { id: st
 			await prisma.notification.create({
 				data: {
 					userId: answer.author.id,
-					type: 'ANSWER',
+					type: 'ACCEPTED',
 					title: 'Your answer was accepted!',
 					message: `Your answer to "${answer.question.title}" was accepted by ${user.name}`,
 					relatedQuestionId: answer.question.id,

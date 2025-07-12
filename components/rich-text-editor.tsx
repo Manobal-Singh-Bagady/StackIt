@@ -36,6 +36,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
 	const [linkUrl, setLinkUrl] = useState('')
 	const [linkText, setLinkText] = useState('')
 	const [isTyping, setIsTyping] = useState(false)
+	const [savedSelection, setSavedSelection] = useState<Range | null>(null)
 	const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
 	// Only update innerHTML when value changes externally (not when typing)
@@ -73,6 +74,36 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
 		}, 500) // Increased from 100ms to 500ms
 	}
 
+	// Save current cursor position and get selected text for link
+	const saveSelection = () => {
+		const selection = window.getSelection()
+		if (selection && selection.rangeCount > 0) {
+			const range = selection.getRangeAt(0)
+			// Only save selection if it's within our editor
+			if (editorRef.current && editorRef.current.contains(range.commonAncestorContainer)) {
+				setSavedSelection(range.cloneRange())
+
+				// If there's selected text, use it as the link text
+				const selectedText = selection.toString().trim()
+				if (selectedText) {
+					setLinkText(selectedText)
+				}
+			}
+		}
+	}
+
+	// Restore cursor position
+	const restoreSelection = () => {
+		if (savedSelection && editorRef.current) {
+			const selection = window.getSelection()
+			if (selection) {
+				selection.removeAllRanges()
+				selection.addRange(savedSelection)
+				editorRef.current.focus()
+			}
+		}
+	}
+
 	const execCommand = (command: string, value?: string) => {
 		// Temporarily disable typing detection for commands
 		setIsTyping(false)
@@ -100,6 +131,10 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
 	}
 
 	const insertEmoji = (emoji: string) => {
+		// Focus the editor and insert emoji at cursor position
+		if (editorRef.current) {
+			editorRef.current.focus()
+		}
 		execCommand('insertText', emoji)
 	}
 
@@ -128,9 +163,50 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
 
 	const insertLink = () => {
 		if (linkUrl && linkText) {
-			execCommand('insertHTML', `<a href="${linkUrl}" target="_blank" rel="noopener noreferrer">${linkText}</a>`)
+			// Temporarily disable typing detection
+			setIsTyping(false)
+			if (typingTimeoutRef.current) {
+				clearTimeout(typingTimeoutRef.current)
+			}
+
+			// Restore cursor position and focus
+			restoreSelection()
+
+			// Create the link element
+			const linkElement = document.createElement('a')
+			linkElement.href = linkUrl
+			linkElement.target = '_blank'
+			linkElement.rel = 'noopener noreferrer'
+			linkElement.textContent = linkText
+
+			// Insert the link at cursor position
+			const selection = window.getSelection()
+			if (selection && selection.rangeCount > 0) {
+				const range = selection.getRangeAt(0)
+				range.deleteContents()
+				range.insertNode(linkElement)
+
+				// Move cursor after the link
+				range.setStartAfter(linkElement)
+				range.setEndAfter(linkElement)
+				selection.removeAllRanges()
+				selection.addRange(range)
+			}
+
+			// Update content
+			if (editorRef.current) {
+				onChange(editorRef.current.innerHTML)
+			}
+
+			// Clear form
 			setLinkUrl('')
 			setLinkText('')
+			setSavedSelection(null)
+
+			// Re-enable typing detection after a short delay
+			setTimeout(() => {
+				setIsTyping(false)
+			}, 50)
 		}
 	}
 
@@ -140,10 +216,18 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
 			const reader = new FileReader()
 			reader.onload = (e) => {
 				const result = e.target?.result as string
+
+				// Focus the editor first
+				if (editorRef.current) {
+					editorRef.current.focus()
+				}
+
 				execCommand('insertHTML', `<img src="${result}" alt="Uploaded image" style="max-width: 100%; height: auto;" />`)
 			}
 			reader.readAsDataURL(file)
 		}
+		// Reset the input value to allow re-uploading the same file
+		e.target.value = ''
 	}
 
 	return (
@@ -180,7 +264,7 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
 				<div className='flex items-center gap-1'>
 					<Popover>
 						<PopoverTrigger asChild>
-							<Button type='button' variant='ghost' size='sm'>
+							<Button type='button' variant='ghost' size='sm' onClick={saveSelection}>
 								<LinkIcon className='w-4 h-4' />
 							</Button>
 						</PopoverTrigger>
@@ -264,13 +348,21 @@ export function RichTextEditor({ value, onChange, placeholder, className }: Rich
 			<div
 				ref={editorRef}
 				contentEditable
-				className='min-h-[200px] p-3 sm:p-4 focus:outline-none text-sm sm:text-base [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:my-1 [&_a]:text-blue-600 [&_a]:underline [&_a:hover]:text-blue-800 [&_strong]:font-bold [&_em]:italic [&_s]:line-through'
+				className='min-h-[200px] p-3 sm:p-4 focus:outline-none text-sm sm:text-base [&_ul]:list-disc [&_ul]:ml-6 [&_ol]:list-decimal [&_ol]:ml-6 [&_li]:my-1 [&_a]:text-blue-600 [&_a]:underline [&_a:hover]:text-blue-800 dark:[&_a]:text-blue-400 dark:[&_a:hover]:text-blue-300 [&_strong]:font-bold [&_em]:italic [&_s]:line-through'
 				onInput={(e) => {
 					handleTypingStart()
 					onChange(e.currentTarget.innerHTML)
 					handleTypingEnd()
 				}}
-				onKeyDown={handleTypingStart}
+				onKeyDown={(e) => {
+					handleTypingStart()
+
+					// Ctrl+K or Cmd+K for link insertion
+					if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+						e.preventDefault()
+						saveSelection()
+					}
+				}}
 				onKeyUp={handleTypingEnd}
 				onFocus={handleTypingStart}
 				onBlur={() => {
