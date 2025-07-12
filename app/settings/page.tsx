@@ -219,7 +219,7 @@ export default function SettingsPage() {
 								{/* Avatar Section */}
 								<div className='flex flex-col sm:flex-row items-start sm:items-center gap-4'>
 									<Avatar className='w-20 h-20'>
-										<AvatarImage src={user.avatar || '/placeholder.svg'} alt={user.name} />
+										<AvatarImage src={user.avatar || '/placeholder-user.jpg'} alt={user.name} />
 										<AvatarFallback className='text-xl'>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
 									</Avatar>
 									<div className='space-y-2'>

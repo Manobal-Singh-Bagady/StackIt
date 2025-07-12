@@ -548,7 +548,7 @@ export default function QuestionDetailPage() {
 								</span>
 								<span>by</span>
 								<Avatar className='w-6 h-6'>
-									<AvatarImage src={question.author.avatarUrl || '/placeholder.svg'} alt={question.author.name} />
+									<AvatarImage src={question.author.avatarUrl || '/placeholder-user.jpg'} alt={question.author.name} />
 									<AvatarFallback className='text-xs'>{question.author.name.charAt(0).toUpperCase()}</AvatarFallback>
 								</Avatar>
 								<span className='font-medium truncate'>{question.author.name}</span>
@@ -624,7 +624,10 @@ export default function QuestionDetailPage() {
 												</span>
 												<span>by</span>
 												<Avatar className='w-6 h-6'>
-													<AvatarImage src={answer.author.avatarUrl || '/placeholder.svg'} alt={answer.author.name} />
+													<AvatarImage
+														src={answer.author.avatarUrl || '/placeholder-user.jpg'}
+														alt={answer.author.name}
+													/>
 													<AvatarFallback className='text-xs'>
 														{answer.author.name.charAt(0).toUpperCase()}
 													</AvatarFallback>
@@ -653,7 +656,7 @@ export default function QuestionDetailPage() {
 														<div key={comment.id} className='flex space-x-3 p-3 bg-muted/30 rounded-lg'>
 															<Avatar className='w-6 h-6 flex-shrink-0'>
 																<AvatarImage
-																	src={comment.author.avatarUrl || '/placeholder.svg'}
+																	src={comment.author.avatarUrl || '/placeholder-user.jpg'}
 																	alt={comment.author.name}
 																/>
 																<AvatarFallback className='text-xs'>
@@ -676,7 +679,7 @@ export default function QuestionDetailPage() {
 													{user && (
 														<div className='flex space-x-3'>
 															<Avatar className='w-6 h-6 flex-shrink-0'>
-																<AvatarImage src={user.avatarUrl || '/placeholder.svg'} alt={user.name} />
+																<AvatarImage src={user.avatarUrl || '/placeholder-user.jpg'} alt={user.name} />
 																<AvatarFallback className='text-xs'>{user.name.charAt(0).toUpperCase()}</AvatarFallback>
 															</Avatar>
 															<div className='flex-1 space-y-2'>

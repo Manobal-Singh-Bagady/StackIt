@@ -2,28 +2,33 @@ import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
 import { NextRequest } from 'next/server'
 import { prisma } from './db'
+import { User } from '@prisma/client'
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production'
+if (!process.env.JWT_SECRET) {
+	throw new Error('JWT_SECRET environment variable is not set')
+}
 
-export interface JWTPayload {
+const JWT_SECRET = process.env.JWT_SECRET
+
+export type JWTPayload = {
 	userId: string
 	email: string
 	role: string
 }
 
-export async function hashPassword(password: string): Promise<string> {
+export async function hashPassword(password: string) {
 	return bcrypt.hash(password, 12)
 }
 
-export async function comparePassword(password: string, hashedPassword: string): Promise<boolean> {
+export async function comparePassword(password: string, hashedPassword: string) {
 	return bcrypt.compare(password, hashedPassword)
 }
 
-export function generateToken(payload: JWTPayload): string {
+export function generateToken(payload: JWTPayload) {
 	return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' })
 }
 
-export function verifyToken(token: string): JWTPayload | null {
+export function verifyToken(token: string) {
 	try {
 		return jwt.verify(token, JWT_SECRET) as JWTPayload
 	} catch {
@@ -54,12 +59,13 @@ export async function getCurrentUser(request: NextRequest) {
 		})
 
 		return user
-	} catch {
+	} catch (error) {
+		console.error('Error getting current user:', error)
 		return null
 	}
 }
 
-export function createAuthResponse(user: any, token: string) {
+export function createAuthResponse(user: User, token: string) {
 	const response = new Response(
 		JSON.stringify({
 			success: true,

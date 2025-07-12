@@ -229,7 +229,10 @@ export function QuestionList({}: QuestionListProps) {
 								</div>
 								<div className='flex items-center space-x-2 text-sm text-muted-foreground flex-shrink-0'>
 									<Avatar className='w-6 h-6'>
-										<AvatarImage src={question.author.avatarUrl || '/placeholder.svg'} alt={question.author.name} />
+										<AvatarImage
+											src={question.author.avatarUrl || '/placeholder-user.jpg'}
+											alt={question.author.name}
+										/>
 										<AvatarFallback className='text-xs'>{question.author.name.charAt(0).toUpperCase()}</AvatarFallback>
 									</Avatar>
 									<span className='truncate'>{question.author.name}</span>

@@ -1,6 +1,4 @@
-import { NextResponse } from 'next/server'
-import { NextRequest } from 'next/server'
-import { verifyToken } from './lib/auth'
+import { NextRequest, NextResponse } from 'next/server'
 
 // Routes that require authentication
 const protectedRoutes = ['/settings', '/profile']
