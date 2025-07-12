@@ -1,5 +1,7 @@
 # StackIt - Q&A Platform
 
+Video Demo - https://www.loom.com/share/51b3d51bc2374728ae6534e0056778a3?sid=ab357329-d320-483e-8134-cdf0c2cf4621
+
 This is a repository of Odoo Hackathon 2025 for the problem statement 2 (StacckIt).
 
 This is a [T3 Stack](https://create.t3.gg/) project bootstrapped with `create-t3-app`.
