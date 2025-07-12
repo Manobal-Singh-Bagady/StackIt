@@ -111,6 +111,14 @@ export default function AskQuestionPage() {
 			const data = await response.json()
 
 			if (!response.ok) {
+				// Handle specific validation errors
+				if (response.status === 400 && data.details) {
+					// Show validation errors from Zod
+					const errorMessages = data.details
+						.map((detail: any) => `${detail.path.join('.')}: ${detail.message}`)
+						.join(', ')
+					throw new Error(errorMessages)
+				}
 				throw new Error(data.error || 'Failed to post question')
 			}
 
